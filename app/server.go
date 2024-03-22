@@ -65,6 +65,19 @@ func getRequestData(con net.Conn) (RequestData, error) {
 }
 
 func getResponse(path string) string {
+	if strings.Contains(path, "echo") {
+		str := strings.Split(path, "echo/")[1]
+
+		return fmt.Sprintf(
+			`HTTP/1.1 200 OK
+Context-Type: text/plain
+Content-Length: %d
+
+%s`,
+			len(str),
+			str,
+		)
+	}
 	if path == "/" {
 		return "HTTP/1.1 200 OK\r\n\r\n"
 	}
