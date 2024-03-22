@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -13,6 +14,9 @@ type RequestData struct {
 }
 
 func main() {
+	fDirectory := flag.String("directory", "", "directory for file endpoint")
+	defer flag.Parse()
+
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
 		fmt.Println("Failed to bind to port 4221")
@@ -26,11 +30,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		go handleConnection(con)
+		go handleConnection(con, *fDirectory)
 	}
 }
 
-func handleConnection(con net.Conn) {
+func handleConnection(con net.Conn, dir string) {
 	defer func() {
 		if err := con.Close(); err != nil {
 			fmt.Println("Error closing the connection: ", err.Error())
@@ -44,7 +48,7 @@ func handleConnection(con net.Conn) {
 		os.Exit(1)
 	}
 
-	con.Write([]byte(data.getResponse()))
+	con.Write([]byte(data.getResponse(dir)))
 }
 
 func getRequestData(con net.Conn) (RequestData, error) {
@@ -71,32 +75,51 @@ func getRequestData(con net.Conn) (RequestData, error) {
 	}, nil
 }
 
-func (rd RequestData) getResponse() string {
+func (rd RequestData) getResponse(dir string) string {
 	if strings.Contains(rd.path, "echo") {
 		str := strings.Split(rd.path, "echo/")[1]
 
-		return fmt.Sprintf(
-			`HTTP/1.1 200 OK
-Content-Type: text/plain
-Content-Length: %d
-
-%s`, len(str), str,
-		)
+		return Content("text/plain", len(str), str)
 	}
 
 	if strings.Contains(rd.path, "user-agent") {
-		return fmt.Sprintf(
-			`HTTP/1.1 200 OK
-Content-Type: text/plain
-Content-Length: %d
+		return Content("text/plain", len(rd.userAgent), rd.userAgent)
+	}
 
-%s`, len(rd.userAgent), rd.userAgent,
-		)
+	if strings.Contains(rd.path, "files") {
+		filename := strings.Split(rd.path, "files/")[1]
+		fContent, err := os.ReadFile(fmt.Sprintf("%s/%s", dir, filename))
+		if err != nil {
+			return NotFound()
+		}
+
+		return Content("application/octet-stream", len(fContent), string(fContent))
 	}
 
 	if rd.path == "/" {
 		return "HTTP/1.1 200 OK\r\n\r\n"
 	}
 
+	return NotFound()
+}
+
+func NotFound() string {
 	return "HTTP/1.1 404 Not Found\r\n\r\n"
+}
+
+func Content(
+	contentType string,
+	contentLength int,
+	content string,
+) string {
+	return fmt.Sprintf(
+		`HTTP/1.1 200 OK
+Content-Type: %s
+Content-Length: %d
+
+%s`,
+		contentType,
+		contentLength,
+		content,
+	)
 }
