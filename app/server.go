@@ -77,20 +77,20 @@ func (rd RequestData) getResponse() string {
 
 		return fmt.Sprintf(
 			`HTTP/1.1 200 OK
-            Content-Type: text/plain
-            Content-Length: %d
+Content-Type: text/plain
+Content-Length: %d
 
-            %s`, len(str), str,
+%s`, len(str), str,
 		)
 	}
 
 	if strings.Contains(rd.path, "user-agent") {
 		return fmt.Sprintf(
 			`HTTP/1.1 200 OK
-            Content-Type: text/plain
-            Content-Length: %d
+Content-Type: text/plain
+Content-Length: %d
 
-            %s`, len(rd.userAgent), rd.userAgent,
+%s`, len(rd.userAgent), rd.userAgent,
 		)
 	}
 
