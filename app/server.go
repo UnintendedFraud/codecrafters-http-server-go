@@ -70,7 +70,7 @@ func getResponse(path string) string {
 
 		return fmt.Sprintf(
 			`HTTP/1.1 200 OK
-Context-Type: text/plain
+Content-Type: text/plain
 Content-Length: %d
 
 %s`,
