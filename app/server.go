@@ -8,7 +8,8 @@ import (
 )
 
 type RequestData struct {
-	path string
+	path      string
+	userAgent string
 }
 
 func main() {
@@ -43,7 +44,7 @@ func handleConnection(con net.Conn) {
 		os.Exit(1)
 	}
 
-	con.Write([]byte(getResponse(data.path)))
+	con.Write([]byte(data.getResponse()))
 }
 
 func getRequestData(con net.Conn) (RequestData, error) {
@@ -59,26 +60,41 @@ func getRequestData(con net.Conn) (RequestData, error) {
 
 	path := strings.Split(data[0], " ")[1]
 
+	var userAgent string
+	if path == "/user-agent" {
+		userAgent = strings.TrimSpace(strings.Split(data[2], ":")[1])
+	}
+
 	return RequestData{
 		path,
+		userAgent,
 	}, nil
 }
 
-func getResponse(path string) string {
-	if strings.Contains(path, "echo") {
-		str := strings.Split(path, "echo/")[1]
+func (rd RequestData) getResponse() string {
+	if strings.Contains(rd.path, "echo") {
+		str := strings.Split(rd.path, "echo/")[1]
 
 		return fmt.Sprintf(
 			`HTTP/1.1 200 OK
-Content-Type: text/plain
-Content-Length: %d
+            Content-Type: text/plain
+            Content-Length: %d
 
-%s`,
-			len(str),
-			str,
+            %s`, len(str), str,
 		)
 	}
-	if path == "/" {
+
+	if strings.Contains(rd.path, "user-agent") {
+		return fmt.Sprintf(
+			`HTTP/1.1 200 OK
+            Content-Type: text/plain
+            Content-Length: %d
+
+            %s`, len(rd.userAgent), rd.userAgent,
+		)
+	}
+
+	if rd.path == "/" {
 		return "HTTP/1.1 200 OK\r\n\r\n"
 	}
 
