@@ -15,7 +15,7 @@ type RequestData struct {
 
 func main() {
 	fDirectory := flag.String("directory", "", "directory for file endpoint")
-	defer flag.Parse()
+	flag.Parse()
 
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
@@ -76,20 +76,22 @@ func getRequestData(con net.Conn) (RequestData, error) {
 }
 
 func (rd RequestData) getResponse(dir string) string {
-	if strings.Contains(rd.path, "echo") {
+	if strings.HasPrefix(rd.path, "/echo") {
 		str := strings.Split(rd.path, "echo/")[1]
 
 		return Content("text/plain", len(str), str)
 	}
 
-	if strings.Contains(rd.path, "user-agent") {
+	if strings.HasPrefix(rd.path, "/user-agent") {
 		return Content("text/plain", len(rd.userAgent), rd.userAgent)
 	}
 
-	if strings.Contains(rd.path, "files") {
+	if strings.HasPrefix(rd.path, "/files") {
 		filename := strings.Split(rd.path, "files/")[1]
-		fContent, err := os.ReadFile(fmt.Sprintf("%s/%s", dir, filename))
+		fPath := fmt.Sprintf("%s/%s", dir, filename)
+		fContent, err := os.ReadFile(fPath)
 		if err != nil {
+			fmt.Println("Error reading file: ", fPath, err.Error())
 			return NotFound()
 		}
 
