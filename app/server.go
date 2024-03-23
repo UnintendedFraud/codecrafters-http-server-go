@@ -68,7 +68,7 @@ func getRequestData(con net.Conn) (RequestData, error) {
 	method := split[0]
 	path := split[1]
 
-	body := data[len(data)-1]
+	body := strings.TrimSpace(data[len(data)-1])
 
 	var userAgent string
 	if path == "/user-agent" {
