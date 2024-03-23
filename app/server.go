@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 type RequestData struct {
 	path      string
+	method    string
 	userAgent string
 }
 
@@ -62,7 +64,9 @@ func getRequestData(con net.Conn) (RequestData, error) {
 	reqData := string(b)
 	data := strings.Split(reqData, "\r\n")
 
-	path := strings.Split(data[0], " ")[1]
+	split := strings.Split(data[0], " ")
+	method := split[0]
+	path := split[1]
 
 	var userAgent string
 	if path == "/user-agent" {
@@ -71,6 +75,7 @@ func getRequestData(con net.Conn) (RequestData, error) {
 
 	return RequestData{
 		path,
+		method,
 		userAgent,
 	}, nil
 }
@@ -89,10 +94,20 @@ func (rd RequestData) getResponse(dir string) string {
 	if strings.HasPrefix(rd.path, "/files") {
 		filename := strings.Split(rd.path, "files/")[1]
 		fPath := dir + filename
+
 		fContent, err := os.ReadFile(fPath)
 		if err != nil {
 			fmt.Println("Error reading file: ", fPath, err.Error())
 			return NotFound()
+		}
+
+		if rd.method == "POST" {
+			if err = os.WriteFile(fPath, fContent, fs.ModeDevice); err != nil {
+				fmt.Println("Error writing file: ", fPath, err.Error())
+				panic(err)
+			}
+
+			return Created()
 		}
 
 		return Content("application/octet-stream", len(fContent), string(fContent))
@@ -107,6 +122,10 @@ func (rd RequestData) getResponse(dir string) string {
 
 func NotFound() string {
 	return "HTTP/1.1 404 Not Found\r\n\r\n"
+}
+
+func Created() string {
+	return "HTTP/1.1 201 Created\r\n\r\n"
 }
 
 func Content(
