@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/fs"
 	"net"
 	"os"
 	"strings"
@@ -13,6 +12,7 @@ type RequestData struct {
 	path      string
 	method    string
 	userAgent string
+	body      string
 }
 
 func main() {
@@ -68,6 +68,8 @@ func getRequestData(con net.Conn) (RequestData, error) {
 	method := split[0]
 	path := split[1]
 
+	body := data[len(data)-1]
+
 	var userAgent string
 	if path == "/user-agent" {
 		userAgent = strings.TrimSpace(strings.Split(data[2], ":")[1])
@@ -77,6 +79,7 @@ func getRequestData(con net.Conn) (RequestData, error) {
 		path,
 		method,
 		userAgent,
+		body,
 	}, nil
 }
 
@@ -95,19 +98,20 @@ func (rd RequestData) getResponse(dir string) string {
 		filename := strings.Split(rd.path, "files/")[1]
 		fPath := dir + filename
 
-		fContent, err := os.ReadFile(fPath)
-		if err != nil {
-			fmt.Println("Error reading file: ", fPath, err.Error())
-			return NotFound()
-		}
-
 		if rd.method == "POST" {
-			if err = os.WriteFile(fPath, fContent, fs.ModeDevice); err != nil {
-				fmt.Println("Error writing file: ", fPath, err.Error())
+			fmt.Println("BODY: ", rd.body)
+			if err := os.WriteFile(fPath, []byte(rd.body), os.ModeDevice); err != nil {
+				fmt.Println("error writing file: ", fPath, " with body: ", rd.body)
 				panic(err)
 			}
 
 			return Created()
+		}
+
+		fContent, err := os.ReadFile(fPath)
+		if err != nil {
+			fmt.Println("Error reading file: ", fPath, err.Error())
+			return NotFound()
 		}
 
 		return Content("application/octet-stream", len(fContent), string(fContent))
