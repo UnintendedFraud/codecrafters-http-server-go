@@ -88,7 +88,7 @@ func (rd RequestData) getResponse(dir string) string {
 
 	if strings.HasPrefix(rd.path, "/files") {
 		filename := strings.Split(rd.path, "files/")[1]
-		fPath := fmt.Sprintf("%s/%s", dir, filename)
+		fPath := dir + filename
 		fContent, err := os.ReadFile(fPath)
 		if err != nil {
 			fmt.Println("Error reading file: ", fPath, err.Error())
